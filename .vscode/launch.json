@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-EnterpriseProjectManagementPlatformApplication<enterprise_project_management_platform>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.enterprise_project_management_platform.EnterpriseProjectManagementPlatformApplication",
+            "projectName": "enterprise_project_management_platform",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
