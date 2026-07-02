@@ -1,10 +1,14 @@
 package com.example.enterprise_project_management_platform.service.implement;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
+import com.example.enterprise_project_management_platform.entity.EmailVerificationTokenEntity;
 import com.example.enterprise_project_management_platform.entity.RoleEntity;
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 import com.example.enterprise_project_management_platform.entity.UserRoleEntity;
@@ -30,15 +34,16 @@ public class AuthServiceImple implements AuthService {
     @Override
     public RegisterResponse register(RegisterRequest request) {
 
-        if (userRepository.existsByEmail((request.getEmail()))) {  // check for existing user
+        if (userRepository.existsByEmail((request.getEmail()))) { // check for existing user
             throw new RuntimeException("Email already exists");
         }
 
         String encodePassword = passwordEncoder.encode(request.getPassword()); // hash the password
 
         UserEntity user = new UserEntity(); // now save the user in DB
-        UserRoleEntity userRole = new UserRoleEntity(); // save the user role and user 
-        RoleEntity role = roleRepository.findByName(Role.VIEWER.name()).orElseThrow(() -> new RuntimeException("Role not found"));
+        UserRoleEntity userRole = new UserRoleEntity(); // save the user role and user
+        RoleEntity role = roleRepository.findByName(Role.VIEWER.name())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
 
         // save user details
         user.setFirstName(request.getFirstName());
@@ -46,16 +51,26 @@ public class AuthServiceImple implements AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(encodePassword);
 
-        //save user role in userRole table
+        // save user role in userRole table
         userRole.setUser(user);
         userRole.setRole(role);
-
-
 
         userRepository.save(user);
         userRoleRepository.save(userRole);
 
-        return null;
+        // Token setup for email verification
+        EmailVerificationTokenEntity verification = new EmailVerificationTokenEntity();
+
+        verification.setToken(UUID.randomUUID().toString());
+        verification.setUser(user);
+        verification.setExpiresAt(LocalDateTime.now().plusHours(24));
+
+        emailVerificationTokenRepository.save(verification);
+        
+        RegisterResponse response = new RegisterResponse();
+        response.setMessage("Registration successful. Please verify your email.");
+
+        return response;
     }
 
 }
