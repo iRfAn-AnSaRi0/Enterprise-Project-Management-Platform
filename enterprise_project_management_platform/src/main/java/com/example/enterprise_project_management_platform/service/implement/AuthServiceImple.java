@@ -18,6 +18,7 @@ import com.example.enterprise_project_management_platform.repository.RoleReposit
 import com.example.enterprise_project_management_platform.repository.UserRepository;
 import com.example.enterprise_project_management_platform.repository.UserRoleRepository;
 import com.example.enterprise_project_management_platform.service.AuthService;
+import com.example.enterprise_project_management_platform.service.EmailService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +31,7 @@ public class AuthServiceImple implements AuthService {
     private final UserRoleRepository userRoleRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -66,11 +68,45 @@ public class AuthServiceImple implements AuthService {
         verification.setExpiresAt(LocalDateTime.now().plusHours(24));
 
         emailVerificationTokenRepository.save(verification);
-        
+
+        System.out.println("Calling EmailService...");
+
+        emailService.sendVerificationEmail(
+                user.getEmail(),
+                user.getFirstName() + " " + user.getLastName(),
+                verification.getToken());
+
         RegisterResponse response = new RegisterResponse();
         response.setMessage("Registration successful. Please verify your email.");
 
         return response;
+    }
+
+    @Override
+    public String verifyEmail(String token) {
+
+        // find token
+        EmailVerificationTokenEntity verification = emailVerificationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid verification token."));
+
+        // Check expiration
+        if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Verification link has expired.");
+        }
+
+        // get user
+
+        UserEntity user = verification.getUser();
+
+        // verify user
+        user.setEmailVerified(true);
+
+        userRepository.save(user);
+
+        // delete token after verification
+        emailVerificationTokenRepository.delete(verification);
+
+        return "Email verified successfully.";
     }
 
 }

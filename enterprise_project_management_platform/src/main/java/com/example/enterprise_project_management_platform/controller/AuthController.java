@@ -1,6 +1,7 @@
 package com.example.enterprise_project_management_platform.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
@@ -9,6 +10,8 @@ import com.example.enterprise_project_management_platform.service.AuthService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -23,6 +26,11 @@ public class AuthController {
     @PostMapping("/register")
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request){
         return authService.register(request);
+    }
+
+    @GetMapping("/verify-email")
+    public String verifyEmail(@RequestParam String token){
+        return authService.verifyEmail(token);
     }
     
 }
