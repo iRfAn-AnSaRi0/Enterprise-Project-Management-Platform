@@ -3,9 +3,13 @@ package com.example.enterprise_project_management_platform.service.implement;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import javax.management.RuntimeErrorException;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.enterprise_project_management_platform.dto.LoginRequest;
+import com.example.enterprise_project_management_platform.dto.LoginResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
 import com.example.enterprise_project_management_platform.entity.EmailVerificationTokenEntity;
@@ -19,6 +23,7 @@ import com.example.enterprise_project_management_platform.repository.UserReposit
 import com.example.enterprise_project_management_platform.repository.UserRoleRepository;
 import com.example.enterprise_project_management_platform.service.AuthService;
 import com.example.enterprise_project_management_platform.service.EmailService;
+import com.example.enterprise_project_management_platform.service.JwtService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,6 +37,7 @@ public class AuthServiceImple implements AuthService {
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final JwtService jwtService;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -107,6 +113,35 @@ public class AuthServiceImple implements AuthService {
         emailVerificationTokenRepository.delete(verification);
 
         return "Email verified successfully.";
+    }
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+
+        // find user by email
+        UserEntity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password."));
+
+        // check if email is verified
+        if (!user.isEmailVerified()) {
+            throw new RuntimeException("Please verify your email first.");
+        }
+
+        // check password
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid email or password.");
+        }
+
+        // generate access token
+        String accessToken = jwtService.generateAccessToken(user.getEmail());
+
+        // prepare response
+        LoginResponse response = new LoginResponse();
+        response.setAccessToken(accessToken);
+        response.setMessage("Login successful.");
+
+        return response;
+
     }
 
 }
