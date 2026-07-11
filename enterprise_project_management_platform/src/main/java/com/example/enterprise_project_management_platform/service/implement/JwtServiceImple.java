@@ -17,52 +17,61 @@ import java.util.Date;
 @Service
 @RequiredArgsConstructor
 public class JwtServiceImple implements JwtService {
-     private final JwtConfig jwtConfig;
+    private final JwtConfig jwtConfig;
 
-     // Get the signing key from the secret
-     private SecretKey getSigningKey() {
-          return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8));
-     }
+    // Get the signing key from the secret
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes(StandardCharsets.UTF_8));
+    }
 
-     // Generate an access token for the given email
-     @Override
-     public String generateAccessToken(String email) {
-         Date now = new Date();
+    private String generateToken(String email, long expiration) {
 
-         Date expiryDate = new Date(now.getTime() + jwtConfig.getAccessTokenExpiration());
+        Date now = new Date();
 
-          return Jwts.builder()
-            .subject(email)
-            .issuedAt(now)
-            .expiration(expiryDate)
-            .signWith(getSigningKey())
-            .compact();
-     }
+        Date expiryDate = new Date(now.getTime() + expiration);
 
-     // Extract the email from the given token
-     @Override
-     public String extractEmail(String token) {
+        return Jwts.builder()
+                .subject(email)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    // Generate an access token for the given email
+    @Override
+    public String generateAccessToken(String email) {
+        return generateToken(email, jwtConfig.getAccessTokenExpiration());
+    }
+
+    @Override
+public String generateRefreshToken(String email) {
+    return generateToken(email, jwtConfig.getRefreshTokenExpiration());
+}
+
+    // Extract the email from the given token
+    @Override
+    public String extractEmail(String token) {
         return Jwts.parser()
-            .verifyWith(getSigningKey())
-            .build()
-            .parseSignedClaims(token)
-            .getPayload()
-            .getSubject();
-     }
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
 
+    // Check if the given token is valid
+    @Override
+    public boolean isValid(String token) {
 
-     // Check if the given token is valid
-     @Override
-     public boolean isValid(String token) {
-        
         try {
             Jwts.parser()
-              .verifyWith(getSigningKey())
-              .build()
-              .parseSignedClaims(token);
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
             return true;
         } catch (Exception e) {
             return false;
         }
-     }
+    }
 }

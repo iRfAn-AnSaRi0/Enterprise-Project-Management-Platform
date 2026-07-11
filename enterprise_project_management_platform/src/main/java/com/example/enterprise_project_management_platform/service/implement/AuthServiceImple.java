@@ -13,11 +13,13 @@ import com.example.enterprise_project_management_platform.dto.LoginResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
 import com.example.enterprise_project_management_platform.entity.EmailVerificationTokenEntity;
+import com.example.enterprise_project_management_platform.entity.RefreshTokenEntity;
 import com.example.enterprise_project_management_platform.entity.RoleEntity;
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 import com.example.enterprise_project_management_platform.entity.UserRoleEntity;
 import com.example.enterprise_project_management_platform.enums.Role;
 import com.example.enterprise_project_management_platform.repository.EmailVerificationTokenRepository;
+import com.example.enterprise_project_management_platform.repository.RefreshTokenRepository;
 import com.example.enterprise_project_management_platform.repository.RoleRepository;
 import com.example.enterprise_project_management_platform.repository.UserRepository;
 import com.example.enterprise_project_management_platform.repository.UserRoleRepository;
@@ -38,6 +40,7 @@ public class AuthServiceImple implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JwtService jwtService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -135,9 +138,21 @@ public class AuthServiceImple implements AuthService {
         // generate access token
         String accessToken = jwtService.generateAccessToken(user.getEmail());
 
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
+
+        RefreshTokenEntity refreshTokenEntity = new RefreshTokenEntity();
+
+        refreshTokenEntity.setToken(refreshToken);
+        refreshTokenEntity.setUser(user);
+        refreshTokenEntity.setExpiresAt(LocalDateTime.now().plusDays(7));
+        refreshTokenEntity.setRevoked(false);
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
         // prepare response
         LoginResponse response = new LoginResponse();
         response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
         response.setMessage("Login successful.");
 
         return response;
