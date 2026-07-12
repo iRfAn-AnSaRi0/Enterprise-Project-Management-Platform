@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.enterprise_project_management_platform.dto.LoginRequest;
 import com.example.enterprise_project_management_platform.dto.LoginResponse;
+import com.example.enterprise_project_management_platform.dto.LogoutRequest;
 import com.example.enterprise_project_management_platform.dto.RefreshTokenRequest;
 import com.example.enterprise_project_management_platform.dto.RefreshTokenResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
@@ -186,4 +187,24 @@ public class AuthServiceImple implements AuthService {
 
                 return new RefreshTokenResponse(newAccessToken);
     }
+
+
+    @Override
+    public void logout(LogoutRequest request){
+
+        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
+                    .orElseThrow(() -> new RuntimeException("Invalid refresh token."));
+        
+
+                    if(refreshTokenEntity.isRevoked()){
+                        throw new RuntimeException("User already logged out.");
+                    }
+
+                    refreshTokenEntity.setRevoked(true);
+
+                    refreshTokenRepository.save(refreshTokenEntity);
+
+
+    }
 }
+

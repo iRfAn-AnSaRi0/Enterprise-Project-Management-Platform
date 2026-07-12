@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.enterprise_project_management_platform.dto.LoginRequest;
 import com.example.enterprise_project_management_platform.dto.LoginResponse;
+import com.example.enterprise_project_management_platform.dto.LogoutRequest;
 import com.example.enterprise_project_management_platform.dto.RefreshTokenRequest;
 import com.example.enterprise_project_management_platform.dto.RefreshTokenResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
@@ -16,6 +17,7 @@ import com.example.enterprise_project_management_platform.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +49,13 @@ public class AuthController {
     public RefreshTokenResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request){
         return authService.refreshToken(request);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(@Valid @RequestBody LogoutRequest request){
+        authService.logout(request);
+        return ResponseEntity.ok("Logged out successfully.");
+    }
+    
     
 
 }
