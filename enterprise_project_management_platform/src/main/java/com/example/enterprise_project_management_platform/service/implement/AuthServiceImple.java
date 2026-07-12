@@ -3,11 +3,10 @@ package com.example.enterprise_project_management_platform.service.implement;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import javax.management.RuntimeErrorException;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.enterprise_project_management_platform.dto.ForgotPasswordRequest;
 import com.example.enterprise_project_management_platform.dto.LoginRequest;
 import com.example.enterprise_project_management_platform.dto.LoginResponse;
 import com.example.enterprise_project_management_platform.dto.LogoutRequest;
@@ -15,13 +14,16 @@ import com.example.enterprise_project_management_platform.dto.RefreshTokenReques
 import com.example.enterprise_project_management_platform.dto.RefreshTokenResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
+import com.example.enterprise_project_management_platform.dto.ResetPasswordRequest;
 import com.example.enterprise_project_management_platform.entity.EmailVerificationTokenEntity;
+import com.example.enterprise_project_management_platform.entity.PasswordResetTokenEntity;
 import com.example.enterprise_project_management_platform.entity.RefreshTokenEntity;
 import com.example.enterprise_project_management_platform.entity.RoleEntity;
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 import com.example.enterprise_project_management_platform.entity.UserRoleEntity;
 import com.example.enterprise_project_management_platform.enums.Role;
 import com.example.enterprise_project_management_platform.repository.EmailVerificationTokenRepository;
+import com.example.enterprise_project_management_platform.repository.PasswordResetTokenRepository;
 import com.example.enterprise_project_management_platform.repository.RefreshTokenRepository;
 import com.example.enterprise_project_management_platform.repository.RoleRepository;
 import com.example.enterprise_project_management_platform.repository.UserRepository;
@@ -44,6 +46,7 @@ public class AuthServiceImple implements AuthService {
     private final EmailService emailService;
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -206,5 +209,49 @@ public class AuthServiceImple implements AuthService {
 
 
     }
+
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request){
+         UserEntity user = userRepository.findByEmail(request.getEmail())
+         .orElseThrow(() -> new RuntimeException("User not found"));
+
+         String token = UUID.randomUUID().toString();
+
+         PasswordResetTokenEntity resetToken = new PasswordResetTokenEntity();
+
+         resetToken.setToken(token);
+         resetToken.setUser(user);
+         resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+         resetToken.setUsed(false);
+
+         passwordResetTokenRepository.save(resetToken);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request){
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+        .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+
+        if(resetToken.isUsed()){
+            throw new RuntimeException("This reset link has already been used.");
+        }
+
+        if(resetToken.getExpiresAt().isBefore(LocalDateTime.now())){
+            throw new RuntimeException("Reset link has expired.");
+        }
+
+        UserEntity user = resetToken.getUser();
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+    }
+
+
+
 }
 
