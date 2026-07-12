@@ -7,10 +7,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.enterprise_project_management_platform.dto.LoginRequest;
 import com.example.enterprise_project_management_platform.dto.LoginResponse;
+import com.example.enterprise_project_management_platform.dto.RefreshTokenRequest;
+import com.example.enterprise_project_management_platform.dto.RefreshTokenResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
 import com.example.enterprise_project_management_platform.service.AuthService;
-import com.example.enterprise_project_management_platform.service.JwtService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -42,5 +43,10 @@ public class AuthController {
         return authService.login(request);
     }
   
+    @PostMapping("/refresh-token")
+    public RefreshTokenResponse refreshToken(@Valid @RequestBody RefreshTokenRequest request){
+        return authService.refreshToken(request);
+    }
+    
 
 }

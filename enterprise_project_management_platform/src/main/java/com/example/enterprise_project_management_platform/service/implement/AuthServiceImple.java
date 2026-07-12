@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.enterprise_project_management_platform.dto.LoginRequest;
 import com.example.enterprise_project_management_platform.dto.LoginResponse;
+import com.example.enterprise_project_management_platform.dto.RefreshTokenRequest;
+import com.example.enterprise_project_management_platform.dto.RefreshTokenResponse;
 import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
 import com.example.enterprise_project_management_platform.entity.EmailVerificationTokenEntity;
@@ -159,4 +161,29 @@ public class AuthServiceImple implements AuthService {
 
     }
 
+    @Override
+    public RefreshTokenResponse refreshToken(RefreshTokenRequest request){
+
+        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token."));
+
+
+                if(refreshTokenEntity.isRevoked()){
+                    throw new RuntimeException("Refresh token has been revoked.");
+                }
+
+                if(refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())){
+                    throw new RuntimeException("Refresh token has expired.");
+                }
+
+                if(!jwtService.isValid(request.getRefreshToken())){
+                    throw new RuntimeException("Refresh token is not valid.");
+                }
+
+                String email = jwtService.extractEmail(request.getRefreshToken());
+
+                String newAccessToken = jwtService.generateAccessToken(email);
+
+                return new RefreshTokenResponse(newAccessToken);
+    }
 }
