@@ -32,6 +32,13 @@ import com.example.enterprise_project_management_platform.service.AuthService;
 import com.example.enterprise_project_management_platform.service.EmailService;
 import com.example.enterprise_project_management_platform.service.JwtService;
 
+import exception.AlreadyLoggedOutException;
+import exception.InvalidCredentialsException;
+import exception.InvalidTokenException;
+import exception.TokenAlreadyUsedException;
+import exception.TokenExpiredException;
+import exception.UserAlreadyExistsException;
+import exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -52,7 +59,7 @@ public class AuthServiceImple implements AuthService {
     public RegisterResponse register(RegisterRequest request) {
 
         if (userRepository.existsByEmail((request.getEmail()))) { // check for existing user
-            throw new RuntimeException("Email already exists");
+            throw new UserAlreadyExistsException("Email already exists");
         }
 
         String encodePassword = passwordEncoder.encode(request.getPassword()); // hash the password
@@ -102,11 +109,11 @@ public class AuthServiceImple implements AuthService {
 
         // find token
         EmailVerificationTokenEntity verification = emailVerificationTokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid verification token."));
+                .orElseThrow(() -> new InvalidTokenException("Invalid verification token."));
 
         // Check expiration
         if (verification.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Verification link has expired.");
+            throw new TokenExpiredException("Verification link has expired.");
         }
 
         // get user
@@ -169,19 +176,19 @@ public class AuthServiceImple implements AuthService {
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request){
 
         RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
-                .orElseThrow(() -> new RuntimeException("Invalid refresh token."));
+                .orElseThrow(() -> new InvalidTokenException("Invalid refresh token."));
 
 
                 if(refreshTokenEntity.isRevoked()){
-                    throw new RuntimeException("Refresh token has been revoked.");
+                    throw new InvalidCredentialsException("Refresh token has been revoked.");
                 }
 
                 if(refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())){
-                    throw new RuntimeException("Refresh token has expired.");
+                    throw new TokenExpiredException("Refresh token has expired.");
                 }
 
                 if(!jwtService.isValid(request.getRefreshToken())){
-                    throw new RuntimeException("Refresh token is not valid.");
+                    throw new InvalidTokenException("Refresh token is not valid.");
                 }
 
                 String email = jwtService.extractEmail(request.getRefreshToken());
@@ -196,11 +203,11 @@ public class AuthServiceImple implements AuthService {
     public void logout(LogoutRequest request){
 
         RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
-                    .orElseThrow(() -> new RuntimeException("Invalid refresh token."));
+                    .orElseThrow(() -> new InvalidTokenException("Invalid refresh token."));
         
 
                     if(refreshTokenEntity.isRevoked()){
-                        throw new RuntimeException("User already logged out.");
+                        throw new AlreadyLoggedOutException("User already logged out.");
                     }
 
                     refreshTokenEntity.setRevoked(true);
@@ -214,7 +221,7 @@ public class AuthServiceImple implements AuthService {
     @Override
     public void forgotPassword(ForgotPasswordRequest request){
          UserEntity user = userRepository.findByEmail(request.getEmail())
-         .orElseThrow(() -> new RuntimeException("User not found"));
+         .orElseThrow(() -> new UserNotFoundException("User not found"));
 
          String token = UUID.randomUUID().toString();
 
@@ -231,14 +238,14 @@ public class AuthServiceImple implements AuthService {
     @Override
     public void resetPassword(ResetPasswordRequest request){
         PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-        .orElseThrow(() -> new RuntimeException("Invalid reset token"));
+        .orElseThrow(() -> new InvalidTokenException("Invalid reset token"));
 
         if(resetToken.isUsed()){
-            throw new RuntimeException("This reset link has already been used.");
+            throw new  TokenAlreadyUsedException("This reset link has already been used.");
         }
 
         if(resetToken.getExpiresAt().isBefore(LocalDateTime.now())){
-            throw new RuntimeException("Reset link has expired.");
+            throw new TokenExpiredException("Reset link has expired.");
         }
 
         UserEntity user = resetToken.getUser();
