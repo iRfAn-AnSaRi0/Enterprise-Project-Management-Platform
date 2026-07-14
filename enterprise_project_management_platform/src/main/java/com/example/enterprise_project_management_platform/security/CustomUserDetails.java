@@ -6,6 +6,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.List;
+
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 
 public class CustomUserDetails implements UserDetails {
@@ -46,12 +48,25 @@ public class CustomUserDetails implements UserDetails {
         return true;
     }
 
+    // @Override
+    // public Collection<? extends GrantedAuthority> getAuthorities() {
+
+    //     return user.getUserRoles()
+    //             .stream()
+    //             .map(userRole -> new SimpleGrantedAuthority("ROLE_" + userRole.getRole().getName())).toList();
+
+    // }
+
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+public Collection<? extends GrantedAuthority> getAuthorities() {
 
-        return user.getUserRoles()
-                .stream()
-                .map(userRole -> new SimpleGrantedAuthority("ROLE_" + userRole.getRole().getName())).toList();
+    List<SimpleGrantedAuthority> authorities = user.getUserRoles()
+            .stream()
+            .map(userRole -> new SimpleGrantedAuthority("ROLE_" + userRole.getRole().getName()))
+            .toList();
 
-    }
+    System.out.println("Authorities: " + authorities);
+
+    return authorities;
+}
 }

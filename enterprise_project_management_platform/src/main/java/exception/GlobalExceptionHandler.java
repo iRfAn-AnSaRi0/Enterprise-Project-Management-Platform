@@ -1,5 +1,6 @@
 package exception;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 
 import org.springframework.http.HttpStatus;
@@ -83,13 +84,14 @@ public class GlobalExceptionHandler {
         }
 
         @ExceptionHandler(TokenAlreadyUsedException.class)
-        public ResponseEntity<ErrorResponse> handleTokenAlreadyUsed(TokenAlreadyUsedException ex, HttpServletRequest request){
+        public ResponseEntity<ErrorResponse> handleTokenAlreadyUsed(TokenAlreadyUsedException ex,
+                        HttpServletRequest request) {
                 ErrorResponse response = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(ex.getMessage())
-                .path(request.getRequestURI())
-                .build();
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
@@ -107,15 +109,31 @@ public class GlobalExceptionHandler {
         }
 
         @ExceptionHandler(AlreadyLoggedOutException.class)
-        public ResponseEntity<ErrorResponse> handleAlreadyLoggedOut(AlreadyLoggedOutException ex, HttpServletRequest request){
+        public ResponseEntity<ErrorResponse> handleAlreadyLoggedOut(AlreadyLoggedOutException ex,
+                        HttpServletRequest request) {
                 ErrorResponse response = ErrorResponse.builder()
-                       .timestamp(LocalDateTime.now())
-                       .status(HttpStatus.BAD_REQUEST.value())
-                       .error(ex.getMessage())
-                       .path(request.getRequestURI())
-                       .build();
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.BAD_REQUEST.value())
+                                .error(ex.getMessage())
+                                .path(request.getRequestURI())
+                                .build();
 
-                       return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        @ExceptionHandler(AccessDeniedException.class)
+        public ResponseEntity<ErrorResponse> handleAccessDenied(
+                        AccessDeniedException ex,
+                        HttpServletRequest request) {
+
+                ErrorResponse response = ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now())
+                                .status(HttpStatus.FORBIDDEN.value())
+                                .error("You do not have permission to access this resource.")
+                                .path(request.getRequestURI())
+                                .build();
+
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
         }
 
         // validation exception

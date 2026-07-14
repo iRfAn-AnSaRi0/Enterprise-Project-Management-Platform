@@ -3,12 +3,14 @@ package com.example.enterprise_project_management_platform.repository;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 
 
 public interface UserRepository extends JpaRepository<UserEntity, UUID> {
     
+    @EntityGraph(attributePaths = {"userRoles", "userRoles.role"})
     Optional<UserEntity> findByEmail(String email);
     boolean existsByEmail(String email);
 } 
