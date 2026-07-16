@@ -10,7 +10,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.example.enterprise_project_management_platform.security.CustomOAuth2UserService;
 import com.example.enterprise_project_management_platform.security.JwtAuthenticationFilter;
+import com.example.enterprise_project_management_platform.security.OAuth2AuthenticationSuccessHandler;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
@@ -30,25 +34,30 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http)
-       throws Exception{
-            http
+            throws Exception {
+        http
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(
-                        "/api/auth/**",
-                        "/h2-console/**"
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/h2-console/**"
 
-                    ).permitAll()
+                        ).permitAll()
 
-                    .anyRequest().authenticated()
+                        .anyRequest().authenticated()
 
-                ).addFilterBefore(jwtAuthFilter,
-        UsernamePasswordAuthenticationFilter.class);
+                )
 
-                return http.build();
+                 .oauth2Login(oauth -> oauth.userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                        .successHandler(oAuth2AuthenticationSuccessHandler))
 
-        }
+                .addFilterBefore(jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+
+    }
 
 }

@@ -16,26 +16,48 @@ import com.example.enterprise_project_management_platform.repository.RoleReposit
 import com.example.enterprise_project_management_platform.repository.UserRepository;
 import com.example.enterprise_project_management_platform.repository.UserRoleRepository;
 
+import jakarta.annotation.PostConstruct;
+
+import org.springframework.transaction.annotation.Transactional;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+
+@PostConstruct
+public void init() {
+    System.out.println("CustomOAuth2UserService Bean Created");
+}
 
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
 
+    
+
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-
+       System.out.println("INSIDE CustomOAuth2UserService");
         OAuth2User oauthUser = super.loadUser(userRequest);
 
         Map<String, Object> attributes = oauthUser.getAttributes();
 
+        System.out.println("Google User Attributes: " + attributes);
+
+
         String email = (String) attributes.get("email");
         String name = (String) attributes.get("name");
         String picture = (String) attributes.get("picture");
+
+        System.out.println("Email = " + email);
+
+System.out.println(
+    "User Exists = " +
+    userRepository.existsByEmail(email)
+);
 
         UserEntity user = userRepository.findByEmail(email)
                 .orElseGet(() -> createUser(
@@ -48,6 +70,9 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private UserEntity createUser(String email, String name, String picture) {
+             
+        System.out.println("Creating user: " + email);
+
         UserEntity user = new UserEntity();
 
         String[] names = name.split(" ");
@@ -76,6 +101,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         userRepository.save(user);
 
+         System.out.println("Saved user with ID: " + user.getId());
+
         RoleEntity role = roleRepository
                 .findByName(Role.VIEWER.name())
                 .orElseThrow(
@@ -91,7 +118,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         userRoleRepository.save(userRole);
 
-
+ System.out.println("Assigned VIEWER role.");
         return user;
 
 
