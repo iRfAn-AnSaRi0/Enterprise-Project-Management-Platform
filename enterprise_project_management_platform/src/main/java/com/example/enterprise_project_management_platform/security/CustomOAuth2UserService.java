@@ -27,11 +27,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
-@PostConstruct
-public void init() {
-    System.out.println("CustomOAuth2UserService Bean Created");
-}
-
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
