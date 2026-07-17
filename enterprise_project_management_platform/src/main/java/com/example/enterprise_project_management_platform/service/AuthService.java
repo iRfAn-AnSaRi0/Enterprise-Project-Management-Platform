@@ -10,13 +10,15 @@ import com.example.enterprise_project_management_platform.dto.RegisterRequest;
 import com.example.enterprise_project_management_platform.dto.RegisterResponse;
 import com.example.enterprise_project_management_platform.dto.ResetPasswordRequest;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 public interface AuthService {
 
     RegisterResponse register(RegisterRequest request);
 
     String verifyEmail(String token);
 
-    LoginResponse login(LoginRequest request);
+    LoginResponse login(LoginRequest request, HttpServletRequest httpServletRequest);
 
     RefreshTokenResponse refreshToken(RefreshTokenRequest request);
 

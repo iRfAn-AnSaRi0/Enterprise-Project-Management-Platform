@@ -9,7 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-
 @Setter
 @Getter
 @AllArgsConstructor
@@ -43,4 +42,10 @@ public class UserSessionEntity {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(nullable = false)
+    private LocalDateTime expiresAt;
+
+    @Column(unique = true, nullable = false)
+    private String sessionId;
 }

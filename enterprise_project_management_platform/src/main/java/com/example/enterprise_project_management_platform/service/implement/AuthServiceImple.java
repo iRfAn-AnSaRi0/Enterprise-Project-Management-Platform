@@ -21,6 +21,7 @@ import com.example.enterprise_project_management_platform.entity.RefreshTokenEnt
 import com.example.enterprise_project_management_platform.entity.RoleEntity;
 import com.example.enterprise_project_management_platform.entity.UserEntity;
 import com.example.enterprise_project_management_platform.entity.UserRoleEntity;
+import com.example.enterprise_project_management_platform.entity.UserSessionEntity;
 import com.example.enterprise_project_management_platform.enums.Role;
 import com.example.enterprise_project_management_platform.repository.EmailVerificationTokenRepository;
 import com.example.enterprise_project_management_platform.repository.PasswordResetTokenRepository;
@@ -28,6 +29,7 @@ import com.example.enterprise_project_management_platform.repository.RefreshToke
 import com.example.enterprise_project_management_platform.repository.RoleRepository;
 import com.example.enterprise_project_management_platform.repository.UserRepository;
 import com.example.enterprise_project_management_platform.repository.UserRoleRepository;
+import com.example.enterprise_project_management_platform.repository.UserSessionRepository;
 import com.example.enterprise_project_management_platform.service.AuthService;
 import com.example.enterprise_project_management_platform.service.EmailService;
 import com.example.enterprise_project_management_platform.service.JwtService;
@@ -39,6 +41,7 @@ import exception.TokenAlreadyUsedException;
 import exception.TokenExpiredException;
 import exception.UserAlreadyExistsException;
 import exception.UserNotFoundException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -54,6 +57,7 @@ public class AuthServiceImple implements AuthService {
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final UserSessionRepository userSessionRepository;
 
     @Override
     public RegisterResponse register(RegisterRequest request) {
@@ -132,7 +136,7 @@ public class AuthServiceImple implements AuthService {
     }
 
     @Override
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, HttpServletRequest httpServletRequest) {
 
         // find user by email
         UserEntity user = userRepository.findByEmail(request.getEmail())
@@ -162,6 +166,26 @@ public class AuthServiceImple implements AuthService {
 
         refreshTokenRepository.save(refreshTokenEntity);
 
+        UserSessionEntity session = new UserSessionEntity();
+        session.setUser(user);
+        session.setSessionId(UUID.randomUUID().toString());
+
+        session.setDeviceName("Chrome");
+        session.setIpAddress(
+                httpServletRequest.getRemoteAddr());
+
+        session.setUserAgent(
+                httpServletRequest.getHeader("User-Agent"));
+
+        session.setLoginTime(LocalDateTime.now());
+        session.setLastActive(LocalDateTime.now());
+        session.setExpiresAt(
+                LocalDateTime.now().plusDays(7));
+
+        session.setActive(true);
+
+        userSessionRepository.save(session);
+
         // prepare response
         LoginResponse response = new LoginResponse();
         response.setAccessToken(accessToken);
@@ -173,78 +197,73 @@ public class AuthServiceImple implements AuthService {
     }
 
     @Override
-    public RefreshTokenResponse refreshToken(RefreshTokenRequest request){
+    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
 
         RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new InvalidTokenException("Invalid refresh token."));
 
-
-                if(refreshTokenEntity.isRevoked()){
-                    throw new InvalidCredentialsException("Refresh token has been revoked.");
-                }
-
-                if(refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())){
-                    throw new TokenExpiredException("Refresh token has expired.");
-                }
-
-                if(!jwtService.isValid(request.getRefreshToken())){
-                    throw new InvalidTokenException("Refresh token is not valid.");
-                }
-
-                String email = jwtService.extractEmail(request.getRefreshToken());
-
-                String newAccessToken = jwtService.generateAccessToken(email);
-
-                return new RefreshTokenResponse(newAccessToken);
-    }
-
-
-    @Override
-    public void logout(LogoutRequest request){
-
-        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
-                    .orElseThrow(() -> new InvalidTokenException("Invalid refresh token."));
-        
-
-                    if(refreshTokenEntity.isRevoked()){
-                        throw new AlreadyLoggedOutException("User already logged out.");
-                    }
-
-                    refreshTokenEntity.setRevoked(true);
-
-                    refreshTokenRepository.save(refreshTokenEntity);
-
-
-    }
-
-
-    @Override
-    public void forgotPassword(ForgotPasswordRequest request){
-         UserEntity user = userRepository.findByEmail(request.getEmail())
-         .orElseThrow(() -> new UserNotFoundException("User not found"));
-
-         String token = UUID.randomUUID().toString();
-
-         PasswordResetTokenEntity resetToken = new PasswordResetTokenEntity();
-
-         resetToken.setToken(token);
-         resetToken.setUser(user);
-         resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(15));
-         resetToken.setUsed(false);
-
-         passwordResetTokenRepository.save(resetToken);
-    }
-
-    @Override
-    public void resetPassword(ResetPasswordRequest request){
-        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-        .orElseThrow(() -> new InvalidTokenException("Invalid reset token"));
-
-        if(resetToken.isUsed()){
-            throw new  TokenAlreadyUsedException("This reset link has already been used.");
+        if (refreshTokenEntity.isRevoked()) {
+            throw new InvalidCredentialsException("Refresh token has been revoked.");
         }
 
-        if(resetToken.getExpiresAt().isBefore(LocalDateTime.now())){
+        if (refreshTokenEntity.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new TokenExpiredException("Refresh token has expired.");
+        }
+
+        if (!jwtService.isValid(request.getRefreshToken())) {
+            throw new InvalidTokenException("Refresh token is not valid.");
+        }
+
+        String email = jwtService.extractEmail(request.getRefreshToken());
+
+        String newAccessToken = jwtService.generateAccessToken(email);
+
+        return new RefreshTokenResponse(newAccessToken);
+    }
+
+    @Override
+    public void logout(LogoutRequest request) {
+
+        RefreshTokenEntity refreshTokenEntity = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new InvalidTokenException("Invalid refresh token."));
+
+        if (refreshTokenEntity.isRevoked()) {
+            throw new AlreadyLoggedOutException("User already logged out.");
+        }
+
+        refreshTokenEntity.setRevoked(true);
+
+        refreshTokenRepository.save(refreshTokenEntity);
+
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+        UserEntity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        String token = UUID.randomUUID().toString();
+
+        PasswordResetTokenEntity resetToken = new PasswordResetTokenEntity();
+
+        resetToken.setToken(token);
+        resetToken.setUser(user);
+        resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(15));
+        resetToken.setUsed(false);
+
+        passwordResetTokenRepository.save(resetToken);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetTokenEntity resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new InvalidTokenException("Invalid reset token"));
+
+        if (resetToken.isUsed()) {
+            throw new TokenAlreadyUsedException("This reset link has already been used.");
+        }
+
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new TokenExpiredException("Reset link has expired.");
         }
 
@@ -258,7 +277,4 @@ public class AuthServiceImple implements AuthService {
         passwordResetTokenRepository.save(resetToken);
     }
 
-
-
 }
-
